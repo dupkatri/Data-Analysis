@@ -1,0 +1,184 @@
+# Healthcare Dataset Analysis
+import pandas as pd
+import numpy as np
+data = pd.read_csv("dataset\\healthcare-dataset-stroke-data.csv")
+data
+# Values to be extracted and removed
+values_to_extract = ['NaN', '--', 'null', 'NA', '','not reported','9999']
+
+# Filtering and removing rows
+for column in data.columns:
+    data = data[~data[column].isin(values_to_extract)]
+
+# Resetting the index
+data.reset_index(drop=True, inplace=True)
+
+print(data)
+
+data.count()
+
+# Calculate the mean BMI value, here we calculate the mean of BMI to impute missing values in BMI
+mean_bmi = data['bmi'].mean()
+
+# Impute missing BMI values with the mean
+data['bmi'].fillna(mean_bmi, inplace=True)
+
+# Save the modified dataset
+data.to_csv('imputed_dataset.csv', index=False)
+
+data = pd.read_csv("imputed_dataset.csv")
+
+data.count()  # the row count of all the columns are uniform
+
+import pandas as pd
+
+# Assuming 'df' is your DataFrame
+numeric_df = data.applymap(pd.to_numeric, errors='coerce')  # Convert all values to numeric, ignoring errors
+
+condition = numeric_df < 0.0001  # Applying the condition to all columns
+
+# Iterate through each column in the DataFrame
+for column_name in numeric_df.columns:
+    # Calculate the mean and standard deviation
+    mean = numeric_df.loc[condition[column_name], column_name].mean()
+    std = numeric_df.loc[condition[column_name], column_name].std()
+
+    # Define the outlier threshold
+    threshold = 3 * std
+
+    # Detect outliers
+    outliers = numeric_df.loc[condition[column_name], column_name][(numeric_df.loc[condition[column_name], column_name] < mean - threshold) | (numeric_df.loc[condition[column_name], column_name] > mean + threshold)]
+
+    data = data.drop(outliers.index)
+
+data.count()
+
+data.head()
+
+unique_gender = data['gender'].unique()   # to determine unique values in the column gender
+unique_gender
+
+unique_ever_married = data['ever_married'].unique() # to determine unique values in the column ever_married
+unique_ever_married
+
+unique_work_type = data['work_type'].unique() # to determine the unique vqlues in the column work_type
+unique_work_type
+
+unique_Residence_type = data['Residence_type'].unique() # to determine the unique vqlues in the column residence_type
+unique_Residence_type
+
+data = data[data['smoking_status'] != 'Unknown']
+
+unique_smoking_status = data['smoking_status'].unique() # to determine the unique vqlues in the column smoking_status
+unique_smoking_status
+
+data = data.replace({'Male': 0, 'Female': 1}) 
+
+data = data.replace({'No': 0, 'Yes': 1})
+
+data = data.replace({'Private': 0, 'Self-employed': 1, 'Govt_job': 2, 'children': 3 }) 
+
+data = data.replace({'Urban': 0, 'Rural': 1}) 
+
+data = data.replace({'formerly smoked': 0, 'never smoked': 1, 'smokes': 2 }) 
+
+data.head()
+
+data = data.drop('id', axis=1)
+
+data.head()
+
+from sklearn.preprocessing import MinMaxScaler
+
+# Create a MinMaxScaler object
+scaler = MinMaxScaler()
+
+# Scale the 'age' column to the range of 0 to 1
+data['age'] = scaler.fit_transform(data[['age']])
+
+# Round the scaled values to 2 decimal places
+# data['Age_at_diagnosis'] = np.round(data['Age_at_diagnosis'], 2)
+
+# Display the scaled 'age' column
+# print(data['Age_at_diagnosis'])
+
+data['avg_glucose_level'] = scaler.fit_transform(data[['avg_glucose_level']])
+
+data['bmi'] = scaler.fit_transform(data[['bmi']])
+# Round the scaled values to 2 decimal places
+data['avg_glucose_level'] = np.round(data['avg_glucose_level'], 1)
+data['bmi'] = np.round(data['bmi'], 1)
+
+data.head()
+
+file_path = "healthdata.csv"
+
+# Save the DataFrame to a file
+data.to_csv(file_path, sep='\t', index=False)
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
+
+# Calculate the correlation matrix
+corr_matrix = data.corr()
+
+# Plot the correlation matrix
+plt.figure(figsize=(10, 8))
+sns.heatmap(corr_matrix, annot=True, fmt=".2f", cmap='Accent_r', cbar=False)
+
+# Customize the plot
+plt.title('Correlation Matrix Plot')
+plt.xticks(rotation=45)
+plt.yticks(rotation=0)
+
+# Display the plot
+plt.show()
+
+# machine learning 
+from sklearn.model_selection import train_test_split
+
+# Separate the features (X) and the target variable (y)
+X = data.drop('stroke', axis=1)  
+y = data['stroke']
+
+# Split the dataset into training and testing sets
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Print the shapes of the resulting train and test sets
+print("Train set shape:", X_train.shape, y_train.shape)
+print("Test set shape:", X_test.shape, y_test.shape)
+
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+# Select the features (X) and the target variable (y)
+X = data['hypertension']  # Replace with your feature names
+y = data['stroke']
+# Create a K-NN classifier (you can specify the number of neighbors, e.g., n_neighbors=5)
+model = KNeighborsClassifier(n_neighbors=5)
+
+# Fit the model to the training data
+model.fit(X_train, y_train)
+
+# Make predictions on the test data
+y_pred = model.predict(X_test)
+
+accuracy = accuracy_score(y_test, y_pred)
+report = classification_report(y_test, y_pred)
+confusion = confusion_matrix(y_test, y_pred)
+
+print(f'Accuracy: {accuracy}')
+print(f'Classification Report:\n{report}')
+print(f'Confusion Matrix:\n{confusion}')
+
+from sklearn.model_selection import GridSearchCV
+
+param_grid = {'n_neighbors': [3, 5, 7, 9]}
+grid = GridSearchCV(KNeighborsClassifier(), param_grid, cv=3)
+grid.fit(X_train, y_train)
+
+best_params = grid.best_params_
+best_model = grid.best_estimator_
